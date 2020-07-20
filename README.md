@@ -1,4 +1,4 @@
-# <p style="background-color: #00aeff; padding: 40px;" id="top" align="center"> <img style="height:140px; background-color: #00aeff;" src="./src/assets/img/frame/login-icon.png" alt="EMMS"/> <p align="center" class="token function">EMMS</p></p>
+# <p style="background-color: #00aeff; padding: 40px;" id="top" align="center"> <img style="height:140px; background-color: #00aeff;" src="./login-icon.png" alt="EMMS"/> <p align="center" class="token function">EMMS</p></p>
 
 #### [markdown(.md)文档查看](#markdown(.md)文档查看)  &emsp; &emsp;  [打包/运行命令说明](#打包/运行命令说明)  &emsp; &emsp;  [引用包名替换](#引用包名替换) &emsp; &emsp;  [弃用模块引用移除](#弃用模块引用移除) &emsp;&emsp;  [路由改造](#路由改造)
 
