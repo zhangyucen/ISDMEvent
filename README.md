@@ -1,4 +1,4 @@
-# <p style="background-color: #00aeff; padding: 40px;" id="top" align="center"> <img style="height:140px; background-color: #00aeff;" src="./login-icon.png" alt="EMMS"/> <p align="center" class="token function">EMMS</p></p>
+# <p style="background-color: #00aeff; padding: 40px;" id="top" align="center"> <img style="height:140px; background-color: #00aeff;" src="./src/assets/img/frame/login-icon.png" alt="EMMS"/> <p align="center" class="token function">EMMS</p></p>
 
 #### [markdown(.md)文档查看](#markdown(.md)文档查看)  &emsp; &emsp;  [打包/运行命令说明](#打包/运行命令说明)  &emsp; &emsp;  [引用包名替换](#引用包名替换) &emsp; &emsp;  [弃用模块引用移除](#弃用模块引用移除) &emsp;&emsp;  [路由改造](#路由改造)
 
@@ -11,6 +11,7 @@
 
 #### [markdown(.md)文档查看](#markdown(.md)文档查看)
   -  推荐使用Google插件查看该文档
+  -  附：[线上文档](#https://github.com/zhangyucen/ISDMEvent)
   1. 解压项目`markdown.rar`压缩文件，解压出来的文件夹保存在插件存放位置
   2. 打开Google浏览器`扩展程序`
   3. 在`扩展程序`界面右上角打开`开发者模式`
@@ -24,10 +25,10 @@
 
 
 #### [打包/运行命令说明](#打包/运行命令说明)
-  - npm run start 启动dev环境`配置文件 src/environment/environment.ts`
-  - npm run build:dev 打包dev环境`配置文件 src/environment/environment.dev.ts`
-  - npm run build:test 打包自定义环境`配置文件 src/environment/environment.test.ts`
-  - npm run build 打包生产环境`配置文件 src/environment/environment.prod.ts`
+  - npm run dev         启动dev环境`配置文件 src/environment/environment.ts`
+  - npm run build:dev   打包dev环境`配置文件 src/environment/environment.dev.ts`
+  - npm run build:test  打包自定义环境`配置文件 src/environment/environment.test.ts`
+  - npm run build       打包生产环境`配置文件 src/environment/environment.prod.ts`
   
   
 ----------------------------------------------------------------`万恶分割线`-----------------------------------------------------------
@@ -59,8 +60,13 @@
     * this.route.snapshot.queryParams['liveId']  // 页面中直接移除相关引用即可
     * this.route.snapshot.paramMap.get['liveId']  // :eventId/*** 占位符传参查询
     
+  - @angular/platform-browser包导出模块名变更 ɵe =》 ɵDomSanitizerImpl
+    
 ```javascript
 // old
+import { DomSanitizer, ɵe } from '@angular/platform-browser' // 移除
+public sanitizer: DomSanitizer = new ɵe(null); // 移除
+
 import {IonicPage, NavParams, NavController, IonicPageModule} from '@ionic/angular';  // 移除模块引用
 constructor(public navCtrl: NavController, public nvaParams: NavParams, public baseService: BaseService) { // 移除
      super(navCtrl, baseService);   // 移除
@@ -70,6 +76,9 @@ constructor(public navCtrl: NavController, public nvaParams: NavParams, public b
 ```
 ```javascript
 // new
+import {DomSanitizer, ɵDomSanitizerImpl} from '@angular/platform-browser'; // 新增
+public sanitizer: DomSanitizer = new ɵDomSanitizerImpl(null); // 新增
+
 constructor(public route: ActivatedRoute, public baseService: BaseService) { // 新增
      super(baseService);    // 新增
      this.liveId = this.route.snapshot.queryParams['liveId'] // 新增
@@ -175,10 +184,33 @@ this.route.snapshot.queryParams.get('LiveId') // 456;
    - 微应用设置localStorage等本地存储时，应加项目独有前缀，防止主应用加载多个微应用时缓存同名覆盖
      * PS：localStorage.setItem('项目名称前缀_缓存变量名', 值)
      * 所有微应用统一使用hash路由模式，并所有路由规则添加项目路由前缀
-       - `如项目名为subLive微应用，sub-live为项目所有路由的统一前缀，直播页：sub-live/live 登录页：sub-live/login`
-     * 主应用配置： 
-       - 入口(entry)：域名/项目目录/#/项目路由前缀(sub-live)   
-       - 菜单(menu)：/#/路由规则(live)
+       - `如项目名为ISDMEvent微应用，ISDMEvent为项目所有路由的统一的一级路由，直播模块：ISDMEvent/live 登录模块：ISDMEvent/login`
+     * 主应用添加子应用参数配置`一级路由为项目名称路由，二级路由为业务模块路由，三级为页面路由`
+       - 入口(entry)：域名/项目目录    
+       - 菜单(menu): /#/微应用所有路由的统一规则(ISDMEvent)/业务模块限制规则(live)/具体页面路由(liveList，`如配置live重定向到页面,三级路由可省略`)  
+   - 子应用业务模块下的所有路由页面参数配置，用于通讯传递给主应用动态添加路由，用于实现主应用的子应用页面tab及跳转功能，格式为vue-router的参数`src/config/qiankun_router.ts`
+   - 微应用通讯
+     - initGlobalState后返回actions实例，是微应用中的全局状态。子应用、主应用其中一个设值，都会触发主、子的onGolbalStateChange事件
+     - PS：子应用只能设值，不能添加新的全局属性（如子应用需添加新属性，需要主应用先初始化一个值，再由子应用修改）
+     - 主应用 `src/qiankun/state`
+       * 监听：在actions.onGolbalStateChange下监听修改后的state
+       * 设值：导入该模块下的actions，并调用actions下面的setGlobalState方法
+     - 微应用 `营销云 src/main.ts`
+       * singleSpaAngular实例化时的bootstrapFunction函数内，通过singleSpaProps.onGlobalStateChange监听，setGlobalState设值
+       
+```javascript
+{
+   // 直播子应用
+    live: [
+        // 直播子应用包含的所有子页面路由
+        {
+            name: 'liveCollaboration',
+            path: ':eventId/liveCollaboration',
+            meta: {title: '直播控制'}
+        }
+    ]
+}
+```
 
 
 ------------------------------------------------------------------`万恶分割线`----------------------------------------------------------
@@ -189,7 +221,7 @@ this.route.snapshot.queryParams.get('LiveId') // 456;
    - 更改项目部署服务器/目录名称
      * 修改environments环境变量部署地址server_url
      * 修改angular.json root属性值，deployUrl属性值，outputPath属性值
-   - 更该微应用统一路由前缀 src/app/app-routing.module.ts
+   - 更改微应用统一路由前缀 src/app/app-routing.module.ts
 ```javascript
   {
     path: '',
@@ -202,9 +234,9 @@ this.route.snapshot.queryParams.get('LiveId') // 456;
 
   },
 ```
-   - 主应用应用添加微应用参数配置 
-     * 入口(entry)：域名/项目目录/#/微应用所有路由的统一规则(sub-live)/业务模块限制规则(live)/     
-     * 菜单(menu): /#/具体页面路由(liveList)  
+   - 主应用添加子应用参数配置 
+     * 入口(entry)：域名/项目目录    
+     * 菜单(menu): /#/微应用所有路由的统一规则(ISDMEvent)/业务模块限制规则(live)/具体页面路由(liveList)  
 
 
 ------------------------------------------------------------------`万恶分割线`----------------------------------------------------------
